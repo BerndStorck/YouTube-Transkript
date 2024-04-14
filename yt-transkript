@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# yt-transkript
+# Version: 1.0.1
+#
+# Project Description:
+# Automatically gets the transcript of a YouTube video.
+#
+# Usage:
+# ./yt-transkript "url"
+#
+# Dependencies:
+# - yt-dlp
+#
+# Author:    Bernd Storck
+# Contact:   https://www.facebook.com/BStLinux/
+#
+# History:   2024-04-10
+#
+# Copyright: 2023, Bernd Storck
+# License:   GNU General Public License 3.0
+#
+
+url="$1"
+outpfile="${2:-transkript.txt}"
+
+# Try download of the subtitles using yt-dlp:
+if ! yt-dlp --write-auto-sub --sub-lang de --skip-download "$url"; then
+  printf "Es ist ein Fehler aufgetreten! Überprüfen sie die Aufrufwerte!"
+  exit 1
+fi    
+
+mv "$(ls -1tr | tail -n 1)" download.vtt
+
+# Loeschen von "<c>" und "</c>" aus allen Zeilen:
+sed -E -e 's:<c>::g' -e 's:</c>::g' < download.vtt > download.txt
+
+# Loeschen von Zeichenfolgen wie "<00:00:00.840>" aus allen Zeilen:
+sed -Ei 's/<[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}>//g' download.txt
+
+# Loescht alle Zeilen, die mit Zeichenfolgen wie "00:00:00.160 --> 00:00:02.430" beginnen:
+sed -Ei '/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.*$/d' download.txt
+
+# Loeschen aller leeren Zeilen:
+sed -Ei '/^[[:space:]]*$/d' download.txt
+
+# Reduziert identische direkt aufeinanderfolgende Zeilen auf eine Zeile:
+uniq download.txt > "$outpfile"
+
+# rm -f download.{vtt,txt}
+
+exit 0
