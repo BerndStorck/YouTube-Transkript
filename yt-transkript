@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # yt-transkript
-# Version: 1.0.1
+# Version: 1.1.0
 #
 # Project Description:
 # Automatically gets the transcript of a YouTube video.
@@ -15,38 +15,53 @@
 # Author:    Bernd Storck
 # Contact:   https://www.facebook.com/BStLinux/
 #
-# History:   2024-04-10
+# History:   2024-04-10, 2024-04-15
 #
-# Copyright: 2023, Bernd Storck
+# Copyright: 2024, Bernd Storck
 # License:   GNU General Public License 3.0
 #
 
 url="$1"
 outpfile="${2:-transkript.txt}"
 
+LANG="de"
+TMP_SUBTITLE_FILE="$(mktemp /tmp/download.XXXXXX)"
+echo "Temporary file name will be: \"$TMP_SUBTITLE_FILE.$LANG.vtt\""
+
 # Try download of the subtitles using yt-dlp:
-if ! yt-dlp --write-auto-sub --sub-lang de --skip-download "$url"; then
+if yt-dlp --write-auto-sub --sub-lang "$LANG" --skip-download "$url" -o "$TMP_SUBTITLE_FILE"; then
+
+  TMP_SUBTITLE_FILE="${TMP_SUBTITLE_FILE}.${LANG}.vtt"
+
+  if [[ -f "$TMP_SUBTITLE_FILE" ]]; then
+
+    # Deletes "<c>" and "</c>" in all lines:
+    sed -i -E -e 's:<c>::g' -e 's:</c>::g' "$TMP_SUBTITLE_FILE"
+
+    # Deletes strings like "<00:00:00.840>" in any line:
+    sed -Ei 's/<[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}>//g' "$TMP_SUBTITLE_FILE"
+
+    # Deletes all lines beginning with strings like "00:00:00.160 --> 00:00:02.430":
+    sed -Ei '/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.*$/d' "$TMP_SUBTITLE_FILE"
+
+    # Deletes all empty lines:
+    sed -Ei '/^[[:space:]]*$/d' "$TMP_SUBTITLE_FILE"
+
+    # Reduces identical consecutive lines to one line and writes the output file:
+    uniq "$TMP_SUBTITLE_FILE" > "$outpfile"
+
+    rm -f "$TMP_SUBTITLE_FILE"  # Clean up temporary files
+
+  else
+    echo "Subtitle file not found."
+    exit 1
+
+  fi
+
+else
   printf "Es ist ein Fehler aufgetreten! Überprüfen sie die Aufrufwerte!"
   exit 1
-fi    
 
-mv "$(ls -1tr | tail -n 1)" download.vtt
-
-# Loeschen von "<c>" und "</c>" aus allen Zeilen:
-sed -E -e 's:<c>::g' -e 's:</c>::g' < download.vtt > download.txt
-
-# Loeschen von Zeichenfolgen wie "<00:00:00.840>" aus allen Zeilen:
-sed -Ei 's/<[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}>//g' download.txt
-
-# Loescht alle Zeilen, die mit Zeichenfolgen wie "00:00:00.160 --> 00:00:02.430" beginnen:
-sed -Ei '/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.*$/d' download.txt
-
-# Loeschen aller leeren Zeilen:
-sed -Ei '/^[[:space:]]*$/d' download.txt
-
-# Reduziert identische direkt aufeinanderfolgende Zeilen auf eine Zeile:
-uniq download.txt > "$outpfile"
-
-# rm -f download.{vtt,txt}
+fi
 
 exit 0
