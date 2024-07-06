@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
 # yt-transkript
-# Version: 1.1.0
+# Version: Look at the first constant definitions below!
 #
 # Project Description:
-# Automatically gets the transcript of a YouTube video.
+#   en: Automatically gets and saves the transcript of a YouTube video.
+#   de: Holt und speichert das Transkript, die Untertitel, eines Youtube-Videos.
 #
 # Usage:
 # ./yt-transkript "url"
@@ -15,53 +16,437 @@
 # Author:    Bernd Storck
 # Contact:   https://www.facebook.com/BStLinux/
 #
-# History:   2024-04-10, 2024-04-15
+# History:   2024-04-10, 2024-04-15, 2024-05-24, 2024-05-27, 2024-06-01, 2024-06-09, 2024-06-26, 2024-06-28
 #
 # Copyright: 2024, Bernd Storck
 # License:   GNU General Public License 3.0
 #
 
+# set -x
+
+# > Value settings: < =======================================================
+
+# > Constants: < ------------------------------------------------------------
+
+readonly SCRIPT_NAME="yt-transkript"  # original script name
+readonly VERSION="2.0.0"
+readonly CURRENT_SCRIPT_NAME="${0##*/}"  # Saves the basename of the script file.
+
 url="$1"
 outpfile="${2:-transkript.txt}"
 
-LANG="de"
+# > Defaults: < ------------------------------------------------------------
+
+lang="de"         # Default output language
+extension="ttml"  # Default downlaod format extension
+
 TMP_SUBTITLE_FILE="$(mktemp /tmp/download.XXXXXX)"
-echo "Temporary file name will be: \"$TMP_SUBTITLE_FILE.$LANG.vtt\""
 
-# Try download of the subtitles using yt-dlp:
-if yt-dlp --write-auto-sub --sub-lang "$LANG" --skip-download "$url" -o "$TMP_SUBTITLE_FILE"; then
 
-  TMP_SUBTITLE_FILE="${TMP_SUBTITLE_FILE}.${LANG}.vtt"
+# > Functions: < ============================================================
 
-  if [[ -f "$TMP_SUBTITLE_FILE" ]]; then
+plotLine () {
+  line_element=${1:--} # Default "-" if no first parameter provided
+  line_length=${2:-10} # Default line length is 10 if no second parameter provided
 
-    # Deletes "<c>" and "</c>" in all lines:
-    sed -i -E -e 's:<c>::g' -e 's:</c>::g' "$TMP_SUBTITLE_FILE"
+  line=
+  for ((i=1; i<=line_length; i++));
+  do
+    line="${line}$line_element"
+  done
+  echo "$line"
+}
 
-    # Deletes strings like "<00:00:00.840>" in any line:
-    sed -Ei 's/<[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}>//g' "$TMP_SUBTITLE_FILE"
 
-    # Deletes all lines beginning with strings like "00:00:00.160 --> 00:00:02.430":
-    sed -Ei '/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.*$/d' "$TMP_SUBTITLE_FILE"
+setDefaultPrograms () {
+# Determines the pager to use with update-alternatives, but if
+# update-alternatives is not available, searchs by itself for a pager.
 
-    # Deletes all empty lines:
-    sed -Ei '/^[[:space:]]*$/d' "$TMP_SUBTITLE_FILE"
+  if command -v update-alternatives > /dev/null; then
 
-    # Reduces identical consecutive lines to one line and writes the output file:
-    uniq "$TMP_SUBTITLE_FILE" > "$outpfile"
-
-    rm -f "$TMP_SUBTITLE_FILE"  # Clean up temporary files
+    PAGER="$(  update-alternatives --get-selections | grep -w 'pager' | tr -s ' ' | cut -d' ' -f3 )"
 
   else
-    echo "Subtitle file not found."
+    PAGER="cat"  # Fallback program if no pager is available.
+    for i in most less more;
+    do
+      if command -v "$i" > /dev/null 2>&1; then
+        PAGER="$i"
+        break
+      fi
+    done
+
+  fi
+}
+
+
+hilfe () { # German help text.
+  echo "
+${SCRIPT_NAME^^} $SCRIPT_VERSION
+    besorgt das automatische Transkript eines Videos von Youtube.
+
+AUFRUFFORMATE:
+    $CURRENT_SCRIPT_NAME [Optionen] URL Ausgabedatei
+
+    $CURRENT_SCRIPT_NAME [--version|-V|-#]
+    $CURRENT_SCRIPT_NAME [--hilf|--help|-h]
+
+ \"--hilf\" erzwingt die Anzeige der deutschsprachigen Hilfe, \"-h\" und
+ \"--help\" machen sie von der Systemsprache abhängig, das heißt zeigt
+ eine deutschprachige nur an, wenn Deutsch die Systemsprache ist, sonst
+ wird die englischsprachige Hilfeseite angezeigt.
+
+$EXAMPLES
+
+
+OPTIONEN:
+    -l      Ausgabesprache: beispielsweise "en" für Englisch.
+    -t      Downloaddateiformat / Dateiendung der Downloaddatei
+            (Default ist 'ttml'; einziger alternativer Wert: 'vtt'.)
+    --hilf  Die deutschsprachige Hilfeseite anzeigen.
+    --help  Zeigt abhängig von der Systemsprache die deutsche oder englische Hilfe an.
+    -#      Die Versionsnummer von $SCRIPT_NAME ausgeben.
+
+ALTERNATIVE SPRECHENDE AUFRUFPARAMETER:
+    -h    --help
+    -#    --version
+
+ACHTUNG:
+- Das Skript bereinigt die Untertiteldatei, damit der Textes leicht zu nutzen ist.
+
+" | more  # was: "$PAGER"
+}
+
+help () { # English help text.
+  echo "
+${SCRIPT_NAME^^} $SCRIPT_VERSION
+    provides the automatic transcript of a video from YouTube.
+
+CALL:
+    $CURRENT_SCRIPT_NAME [optionsn] URL output_file
+
+    $CURRENT_SCRIPT_NAME [--version|-V|-#|]
+    $CURRENT_SCRIPT_NAME [--help|-h|--hilf]
+
+ \"-h\" or \"--help\" is showing the help page dependent on the system's
+ language, i.e. the help page in German language will be shown, if the
+ system's language is German, otherwise the help page in English
+ language will appeare. \"--hilf\" forces the display of the German
+ language help.
+
+$EXAMPLES
+
+OPTIONS:
+    -l      Output language: for example 'en' for English.
+    -t      Download file format / file extension of the download file.
+            (Default is 'ttml'; only alternative value: 'vtt'.)
+    -h    Displays the help page.
+    -#    Displays ${SCRIPT_NAME}'s version.
+
+ALTERNATIVE VERBOSE PARAMETERS
+    -h    --help
+    -#    --version
+
+ATTENTION:
+- The script cleans subtitle file based on criteria for optimal text usability.
+
+" | more  # was: "$PAGER"
+}
+
+
+get_line_length () {
+# Gets the terminal width and saves it in 'line_length'.
+#
+# The sequence of the tests tries to use the more available information sources first.
+#
+  if [ -n "$COLUMNS" ]; then  # Use $COLUMNS environment variable if it is available.
+    line_length="$COLUMNS"
+  # If $COLUMNS is not available:
+  elif command -v stty > /dev/null; then  # check if 'stty' command is available.
+    line_length="$(stty size | cut -d' ' -f2)"
+  # If also 'stty' is not available, try to use 'tput' command:
+  elif ! line_length="$(tput cols)" 2> /dev/null; then
+    line_length=80  # Default to a line length of 80.
+  fi
+}
+
+
+cleanup_vtt_subtitle_file() {
+# This function searchs and replaces parts of the downloaded subtitles.
+#
+# The 'sed' program used here can alter text files. The parts of text to be
+# modified are described by regular expressions, which essentially act as templates
+# for the text sections being searched.
+#
+# Das Programm 'sed', das hier verwendet wird, kann Textdateien verändern. Die zu
+# verändernden Textteile werden durch reguläre Ausdrücke beschrieben, also durch
+# abstrakte formale Muster, die gewissermaßen als Schablonen für die gesuchten
+# Textteile dienen.
+
+  local input_file   # File to read.
+  local output_file  # File to write
+  local modus
+
+  [ "$1" = '--append' ] && modus="append"; shift || modus="overwrite"
+
+  input_file="$1"
+  output_file="$2"
+
+  # Delete the first three lines and "<c>" and "</c>" in all other lines:
+  sed -i -E -e '1,3d' -e 's:<c>::g' -e 's:</c>::g' "$input_file"
+
+  # Delete strings like "<00:00:00.840>" in any line:
+  sed -Ei 's/<[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}>//g' "$input_file"
+
+  # Delete all lines beginning with strings like "00:00:00.160 --> 00:00:02.430":
+  # "[0-9]{2}" decribes a string consisting of exactly two digits, like "15" or "80".
+  sed -Ei '/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.*$/d' "$input_file"
+
+  # Delete all empty lines:
+  #
+  # "[[:space:]]" stands for one of those characters: tab, newline, vertical
+  # tab, form feed, carriage return or space. And "[[:space:]]*" stands for a
+  # sequence of such white spaces, including an empty sequence. Because "^"
+  # stands for line start, and "$" for line end, "^[[:space:]]*$" stands for a
+  # line which is complete empty or contains only white spaces.
+  #
+  sed -Ei '/^[[:space:]]*$/d' "$input_file"
+
+  # Reduce consecutive identical lines to one and write the reduced text to output file:
+  if [ "$modus" = 'append' ]; then
+    uniq "$input_file" >> "$output_file"
+  else
+    uniq "$input_file" > "$output_file"
+  fi
+}
+
+
+add_punctation () {
+  local input_file   # File to read.
+  local output_file  # File to write
+  input_file="$1"
+  output_file="$2"
+
+  python3 ./add_punctuation.py < "$input_file" > "corrected_${output_file}"
+}
+
+
+define_output_phrases () {
+
+  if [ "$UILANG" = "Deutsch" ]; then  # Define message strings according to the used language.
+    ERROR="FEHLER"
+    WARNING="WARNUNG"
+    ERR_NO_EDITOR="FEHLER: Texteditor nicht gefunden."
+    ALREADY_EXISTS="Die Datei existiert schon."
+    MISSING_FILE="Die Datei gibt es nicht."
+    MENU_PROMPT="Ihre Wahl: "
+    OVERWRITE="Überschreiben"
+    CANCEL="Abbruch"
+    INVALID_CHOICE="Ungültige Auswahl!"
+    END="Beenden"
+    CURRENT_NAME_PRAEFIX="Aktueller Dateiname:"
+    EXAMPLES="AUFRUFBEISPIELE:
+    $CURRENT_SCRIPT_NAME 00:03:3E:89:8B:D4
+    $CURRENT_SCRIPT_NAME --mac=00:03:3E:89:8B:D4
+
+    $CURRENT_SCRIPT_NAME --name=\"Creative Stage Air\"
+    $CURRENT_SCRIPT_NAME --name=\"crea\"                        # Nimmt das 1. Geraet, mit 'crea' am Anfang.
+
+    $CURRENT_SCRIPT_NAME --cutout=\"stage\"                      # Nimmt das erste Gerät mit 'stage' im Namen.
+    $CURRENT_SCRIPT_NAME --cutout --name=\"stage\"               # Wie das vorherige Beispiel."
+    EXAMPLES_MORE="
+    $SCRIPT_NAME --complete=\"creative stage air\"         # Findet nur vollständige Namen.
+    $SCRIPT_NAME --complete --name=\"creative stage air\"  # Wie das vorige Beispiel.
+
+    $SCRIPT_NAME --version                            # Programmname und Versionsnummer anzeigen.
+    $SCRIPT_NAME -#                                   # Nur die Versionsnummer anzeigen."
+  else
+    ERROR="ERROR"
+    WARNING="WARNING"
+    ERR_NO_EDITOR="ERROR: Editor not found."
+    ALREADY_EXISTS="This file already exists."
+    MISSING_FILE="File does not exist."
+    MENU_PROMPT="Your choice: "
+    OVERWRITE="Overwrite"
+    CANCEL="Cancel"
+    INVALID_CHOICE="Invalid choice!"
+    END="Terminate"
+    CURRENT_NAME_PRAEFIX="Current file name:"
+    EXAMPLES="EXAMPLES:
+    $CURRENT_SCRIPT_NAME 00:03:3E:89:8B:D4
+    $CURRENT_SCRIPT_NAME --mac=00:03:3E:89:8B:D4
+
+    $CURRENT_SCRIPT_NAME --name=\"Creative Stage Air\"
+    $CURRENT_SCRIPT_NAME --name=\"crea\"                          # Aims at 1st with 'crea' at name start.
+
+    $CURRENT_SCRIPT_NAME --cutout=\"stage\"                        # Takes 1st device with 'stage' in its name.
+    $CURRENT_SCRIPT_NAME --cutout --name=\"stage\"                 # Like the previous example"
+    EXAMPLES_MORE="
+    $SCRIPT_NAME --complete=\"creative stage air\"           # Complete name is 'creative stage air'.
+    $SCRIPT_NAME --complete --name=\"creative stage air\"    # Like the previous example
+
+    $SCRIPT_NAME --version                              # Shows program name and version number.
+    $SCRIPT_NAME -#                                     # Shows only the version number."
+  fi
+}
+
+
+save_video_meta_data () {
+# Save YouTube channel, title, upload date and URL of the video.
+#
+  output_fields='Video-Titel: "%(title)s"
+URL: %(webpage_url)s
+Youtube-Kanal: %(uploader)s
+Upload-Datum: %(upload_date>%Y-%m-%d)s'
+  yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
+  echo >> "$outpfile"
+}
+
+#save_video_meta_data () {
+## Save YouTube channel, title, upload date and URL of the video.
+##
+#  output_fields='Video-Titel: "%(title)s"
+#  URL: %(url)s
+#  Youtube-Kanal: %(uploader)s
+#  Upload-Datum: %(upload_date>%Y-%m-%d)s'
+#  yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
+#  echo >> "$outpfile"
+#}
+
+
+# download_subtitles () {
+#   local options
+#   options="--write-auto-sub --sub-lang \"$lang\" --skip-download \"$url\" -o \"$TMP_SUBTITLE_FILE\""
+#   [ "${1,,}" = 'ttml' ] && options="--sub-format \"ttml\" $options"
+#   eval "yt-dlp $options"
+# }
+
+
+download_subtitles () {
+# Try download of the subtitles using yt-dlp:
+#
+  if yt-dlp --write-auto-sub --sub-lang "$lang" --sub-format "$extension" --skip-download "$url" -o "${TMP_SUBTITLE_FILE}"
+  then
+
+    TMP_SUBTITLE_FILE="${TMP_SUBTITLE_FILE}.${lang}.${extension}"
+
+    if [ ! -f "$TMP_SUBTITLE_FILE" ]; then
+
+      # "Die Untertiteldatei wurde nicht gefunden."
+      echo "Subtitle file not found."
+      exit 1
+
+    fi
+
+  else
+    printf "Es ist ein Fehler aufgetreten! Überprüfen sie die Aufrufwerte!"
+    # "An error has occurred! Check the call values!"
     exit 1
 
   fi
+}
 
-else
-  printf "Es ist ein Fehler aufgetreten! Überprüfen sie die Aufrufwerte!"
-  exit 1
 
-fi
+# Function to clean up temporary files
+cleanup () {
+  rm -f "$TMP_SUBTITLE_FILE"
+}
 
+
+
+# > main < ============================================================
+
+# Sets a flag variable for the user interface language:
+[ "${LANG::2}" = "de" ] && UILANG="Deutsch" || UILANG="English"
+
+# > Call parameter Analysis: < ----------------------------------------
+
+for current_option in "$@"; do
+  case "$current_option" in
+     --add-punctation|--interpunktion|--satzzeichen)
+         setDefaultPrograms
+         shift
+         add_punctation "$1" "$1"
+         eval "$PAGER corrected_$1"
+         exit 0
+         ;;
+     --hilf|--hilfe|--Hilfe)  # Calls German help regardless of system settings for language.
+         UILANG="DEUTSCH"; define_output_phrases  # Set language and define string constants.
+         setDefaultPrograms
+         hilfe
+         exit 0
+         ;;
+     --help|-h)
+         define_output_phrases  # Define language dependent string constants.
+         setDefaultPrograms
+         if [ "$UILANG" = "Deutsch" ]; then
+             hilfe
+         else
+             help
+         fi
+         exit 0
+         ;;
+     --examples|--beispiele)
+         plotLine
+         echo "${EXAMPLES}$EXAMPLES_MORE"
+         echo "$line"
+         exit
+         ;;
+     --version|-V|-\#)   # For possible bug reports.
+         define_output_phrases  # Define language dependent string constants.
+         answer=
+         if [ "$1" = "--version" ] || [ "$1" = "-V" ]; then
+             answer="$SCRIPT_NAME "
+         fi
+         answer="${answer}$VERSION"
+         if [ "$1" != '-#' ] && [ "$CURRENT_SCRIPT_NAME" != "$SCRIPT_NAME" ]; then
+           answer="${answer} ($CURRENT_NAME_PRAEFIX $CURRENT_SCRIPT_NAME)"
+         fi
+         echo "$answer"
+         exit 0
+         ;;
+  esac
+done
+
+
+while getopts 'l:t:' option 2> /dev/null; do
+  case "$option" in
+    l)
+      lang="$OPTARG"  # Ausgabesprache
+      ;;
+    t)
+      # Default value of $extension is 'ttml'.
+      if [ "${OPTARG,,}" = 'vtt' ]; then
+        extension="${OPTARG,,}"  # Dateiendung des Downloadformats
+      fi
+    ;;
+    *) echo "Unbekannte Option: $option"
+    ;;
+  esac
+done
+
+# Shift, um die bereits ausgewerteten Argumente zu überspringen
+shift "$((OPTIND - 1))"
+
+define_output_phrases  # Language dependent messages to the user.
+
+# "Der Name der temporären Datei ist "
+echo "Temporary file name will be: \"$TMP_SUBTITLE_FILE.$lang.$extension\""
+
+trap cleanup EXIT
+
+save_video_meta_data  # YouTube channel, title and upload date
+
+case "$extension" in
+  'ttml')
+     download_subtitles "ttml"
+     sed -E -e 's/<[^>]*>//g' -e "s/&#39;/'/g" -e '/^$/d' "$TMP_SUBTITLE_FILE" >> "$outpfile"
+     ;;
+  *)
+     download_subtitles "vtt"
+     cleanup_vtt_subtitle_file --append "$TMP_SUBTITLE_FILE" "$outpfile"
+     ;;
+esac
+
+# rm -f "$TMP_SUBTITLE_FILE"
 exit 0
