@@ -302,25 +302,6 @@ Upload-Datum: %(upload_date>%Y-%m-%d)s'
   echo >> "$outpfile"
 }
 
-#save_video_meta_data () {
-## Save YouTube channel, title, upload date and URL of the video.
-##
-#  output_fields='Video-Titel: "%(title)s"
-#  URL: %(url)s
-#  Youtube-Kanal: %(uploader)s
-#  Upload-Datum: %(upload_date>%Y-%m-%d)s'
-#  yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
-#  echo >> "$outpfile"
-#}
-
-
-# download_subtitles () {
-#   local options
-#   options="--write-auto-sub --sub-lang \"$lang\" --skip-download \"$url\" -o \"$TMP_SUBTITLE_FILE\""
-#   [ "${1,,}" = 'ttml' ] && options="--sub-format \"ttml\" $options"
-#   eval "yt-dlp $options"
-# }
-
 
 download_subtitles () {
 # Try download of the subtitles using yt-dlp:
