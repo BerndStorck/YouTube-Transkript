@@ -27,11 +27,8 @@
 # > Constants: < ------------------------------------------------------------
 
 readonly SCRIPT_NAME="yt-transkript"  # original script name
-readonly VERSION="2.0.1"
+readonly VERSION="2.0.2"
 readonly CURRENT_SCRIPT_NAME="${0##*/}"  # Saves the basename of the script file.
-
-url="$1"
-outpfile="${2:-transkript.txt}"
 
 # > Defaults: < ------------------------------------------------------------
 
@@ -237,6 +234,12 @@ define_output_phrases () {
     CANCEL="Abbruch"
     INVALID_CHOICE="Ungültige Auswahl!"
     END="Beenden"
+
+    HEADER_VIDEO_TITLE="Video-Titel"
+    HEADER_VIDEO_URL="URL"
+    HEADER_YOUTUBE_CHANNEL="Youtube-Kanal"
+    HEADER_UPLOAD_DAY="Upload-Datum"
+
     CURRENT_NAME_PRAEFIX="Aktueller Dateiname:"
     EXAMPLES="AUFRUFBEISPIELE:
     $CURRENT_SCRIPT_NAME 00:03:3E:89:8B:D4
@@ -264,6 +267,12 @@ define_output_phrases () {
     CANCEL="Cancel"
     INVALID_CHOICE="Invalid choice!"
     END="Terminate"
+
+    HEADER_VIDEO_TITLE="Video title"
+    HEADER_VIDEO_URL="URL"
+    HEADER_YOUTUBE_CHANNEL="Youtube channel"
+    HEADER_UPLOAD_DAY="Upload date"
+
     CURRENT_NAME_PRAEFIX="Current file name:"
     EXAMPLES="EXAMPLES:
     $CURRENT_SCRIPT_NAME 00:03:3E:89:8B:D4
@@ -281,16 +290,29 @@ define_output_phrases () {
     $SCRIPT_NAME --version                              # Shows program name and version number.
     $SCRIPT_NAME -#                                     # Shows only the version number."
   fi
+
+  if [ -n "$lang" ] && [ "${lang,,}" != "de" ]; then  # Define message strings for the output file.
+    HEADER_VIDEO_TITLE="Video title"
+    HEADER_VIDEO_URL="URL"
+    HEADER_YOUTUBE_CHANNEL="Youtube channel"
+    HEADER_UPLOAD_DAY="Upload date"
+  elif [ "${lang,,}" = "de" ]; then
+    HEADER_VIDEO_TITLE="Video-Titel"
+    HEADER_VIDEO_URL="URL"
+    HEADER_YOUTUBE_CHANNEL="Youtube-Kanal"
+    HEADER_UPLOAD_DAY="Upload-Datum"
+  fi  
 }
 
 
 save_video_meta_data () {
 # Save YouTube channel, title, upload date and URL of the video.
 #
-  output_fields='Video-Titel: "%(title)s"
-URL: %(webpage_url)s
-Youtube-Kanal: %(uploader)s
-Upload-Datum: %(upload_date>%Y-%m-%d)s'
+
+  output_fields="$HEADER_VIDEO_TITLE: %(title)s
+$HEADER_VIDEO_URL: %(webpage_url)s
+$HEADER_YOUTUBE_CHANNEL: %(uploader)s
+$HEADER_UPLOAD_DAY: %(upload_date>%Y-%m-%d)s"
   yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
   echo >> "$outpfile"
 }
@@ -299,6 +321,7 @@ Upload-Datum: %(upload_date>%Y-%m-%d)s'
 download_subtitles () {
 # Try download of the subtitles using yt-dlp:
 #
+
   if yt-dlp --write-auto-sub --sub-lang "$lang" --sub-format "$extension" --skip-download "$url" -o "${TMP_SUBTITLE_FILE}"
   then
 
@@ -401,6 +424,9 @@ done
 
 # Shift, um die bereits ausgewerteten Argumente zu überspringen
 shift "$((OPTIND - 1))"
+
+url="$1"
+outpfile="${2:-transkript.txt}"
 
 define_output_phrases  # Language dependent messages to the user.
 
