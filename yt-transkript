@@ -22,14 +22,12 @@
 # License:   GNU General Public License 3.0
 #
 
-# set -x
-
 # > Value settings: < =======================================================
 
 # > Constants: < ------------------------------------------------------------
 
 readonly SCRIPT_NAME="yt-transkript"  # original script name
-readonly VERSION="2.0.0"
+readonly VERSION="2.0.1"
 readonly CURRENT_SCRIPT_NAME="${0##*/}"  # Saves the basename of the script file.
 
 url="$1"
@@ -96,11 +94,8 @@ AUFRUFFORMATE:
  eine deutschprachige nur an, wenn Deutsch die Systemsprache ist, sonst
  wird die englischsprachige Hilfeseite angezeigt.
 
-$EXAMPLES
-
-
 OPTIONEN:
-    -l      Ausgabesprache: beispielsweise "en" für Englisch.
+    -l      Ausgabesprache: beispielsweise \"en\" für Englisch.
     -t      Downloaddateiformat / Dateiendung der Downloaddatei
             (Default ist 'ttml'; einziger alternativer Wert: 'vtt'.)
     --hilf  Die deutschsprachige Hilfeseite anzeigen.
@@ -112,7 +107,7 @@ ALTERNATIVE SPRECHENDE AUFRUFPARAMETER:
     -#    --version
 
 ACHTUNG:
-- Das Skript bereinigt die Untertiteldatei, damit der Textes leicht zu nutzen ist.
+- Das Skript bereinigt die Untertiteldatei, damit der Text leicht zu nutzen ist.
 
 " | more  # was: "$PAGER"
 }
@@ -134,12 +129,10 @@ CALL:
  language will appeare. \"--hilf\" forces the display of the German
  language help.
 
-$EXAMPLES
-
 OPTIONS:
-    -l      Output language: for example 'en' for English.
-    -t      Download file format / file extension of the download file.
-            (Default is 'ttml'; only alternative value: 'vtt'.)
+    -l    Output language: for example \"en\" for English.
+    -t    Download file format / file extension of the download file.
+          (Default is 'ttml'; only alternative value: 'vtt'.)
     -h    Displays the help page.
     -#    Displays ${SCRIPT_NAME}'s version.
 
