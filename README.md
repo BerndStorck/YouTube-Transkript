@@ -80,10 +80,10 @@ You will find the GNU General Public License at <http://www.gnu.org/licenses/>.
 
 ## Deutsch
 ### Beschreibung
-Dieses Bash-Skript ermöglicht es Ihnen automatisch, das Transkript eines YouTube-Videos herunterzuladen, ohne das Video selbst herunterzuladen. Es verwendet das Kommandozeilentool `yt-dlp` zur Extraktion der Untertitel.
+Dieses Bash-Skript kann für Sie das Transkript eines YouTube-Videos als Textdatei auf Ihrem Rechner speichern, ohne das Video selbst herunterzuladen. Es verwendet das Kommandozeilentool `yt-dlp`, um die Untertitel zu extrahieren.
 
 ### Verwendung
-Das Bash-Skript ermöglicht das automatische Herunterladen des Transkripts eines YouTube-Videos, ohne das Video selbst herunterzuladen. Verwenden Sie die folgenden Befehlsformate:
+Verwenden Sie Befehlsformate folgender Form:
 
 ```bash
 yt-transkript [Optionen] URL Ausgabedatei
@@ -94,13 +94,13 @@ yt-transkript [--hilf|--help|-h]
 
 #### Folgende Optionen sind verfügbar:
 
-- `-l`: Ausgabesprache festlegen (Z.B. "en" für Englisch. Um deutsche Untertitel zu erhalten, ist dieser Parameter überflüssig, das Deutsch die Standardsprache für die Ausgabe der Untertitel ist.
+- `-l`: Ausgabesprache festlegen (Z.B. "en" für Englisch. Um deutsche Untertitel zu erhalten, ist dieser Parameter überflüssig, weil Deutsch die Standardsprache für die Ausgabe der Untertitel ist.
 - `-t`: Dateiformat/Dateierweiterung für den Download festlegen (Standard ist 'ttml'; einziger alternativer Wert: 'vtt').  Normalerweise müssen Sie diesen Parameter nicht angeben, da das Skript automatisch von diesen beiden Untertiteldateiformaten ein verfügbares auswählt. TTML ist die für dieses Script ungleich effizientere Wahl, d. h. die Wahl des VTT-Formats verlangsamt das Script.
 
 **Selbstbeschreibungen des Scripts abrufen:**
 - `--hilf`: Deutschsprachige Hilfe anzeigen.
 - `--help`: Je nach Systemsprache deutsche oder englische Hilfe anzeigen.
-- `-#`: Die Versionsnummer von $SCRIPT_NAME anzeigen.
+- `-#`: Die Versionsnummer des Scripts anzeigen.
 
 **Bitte beachten**: Das Skript bereinigt die Untertiteldatei für eine optimale Textnutzung.
 
@@ -117,7 +117,7 @@ yt-transkript [--hilf|--help|-h]
 3. Grundlegende Daten über das Video werden an den Anfang der Ausgabedatei geschrieben: 
     - Video-Titel
     - URL, die Web-Adresse des Videos
-    - Youtube-Kanal
+    - YouTube-Kanal
     - Datum des Uploads zu YouTube
 
 4. Wenn die Untertiteldatei erfolgreich heruntergeladen wurde, wird sie bereinigt:
@@ -125,13 +125,13 @@ yt-transkript [--hilf|--help|-h]
     - HTML-Tags wie `<c>`, Zeitstempel wie `<00:00:00.840>` und Angaben zu Zeitintervallen wie `00:00:00.160 --> 00:00:02.430` werden entfernt.
     - Leere Zeilen werden gelöscht und aufeinanderfolgende identische Zeilen werden zu einer Zeile reduziert.
 
-5. Die bereinigte Transkriptdatei wird in der angegebenen Ausgabedatei gespeichert. Wurde keine Ausgabedatei angegeben, dann wird das Transkript unter dem Dateinamen `transkript.txt` im aktuellen Arbeitsverzeichnis gespeichert.
+5. Die bereinigte Transkriptdatei wird in der angegebenen Ausgabedatei gespeichert. Wurde beim Aufruf keine Ausgabedatei angegeben, dann wird das Transkript unter dem Dateinamen `transkript.txt` im aktuellen Arbeitsverzeichnis gespeichert.
 
 6. Temporäre Dateien werden gelöscht.
 
 ### Fehlerbehandlung
 
-Wenn die Untertiteldatei nicht gefunden oder ein Fehler während des Downloads auftritt, gibt das Skript eine Fehlermeldung auf Deutsch aus und beendet sich mit einem Nicht-Null-Statuscode.
+Wird keine Untertiteldatei auf YouTube gefunden oder tritt ein anderer Fehler während des Downloads auf, dann gibt das Skript eine Fehlermeldung aus und beendet sich mit einem Nicht-Null-Statuscode.
 
 ### Autor
 Bernd Storck
