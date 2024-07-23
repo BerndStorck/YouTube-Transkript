@@ -306,16 +306,33 @@ define_output_phrases () {
 
 
 save_video_meta_data () {
-# Save YouTube channel, title, upload date and URL of the video.
-#
-
+  # Save YouTube channel, title, upload date and URL of the video.
   output_fields="$HEADER_VIDEO_TITLE: %(title)s
 $HEADER_VIDEO_URL: %(webpage_url)s
 $HEADER_YOUTUBE_CHANNEL: %(uploader)s
 $HEADER_UPLOAD_DAY: %(upload_date>%Y-%m-%d)s"
+  
+  # Extract metadata
   yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
+  
+  # Correct the URL format using Unicode code points
+  sed -i 's/\xEF\xBC\x9A/:/g; s/\xE2\xA7\xB8/\//g; s/\xEF\xBC\x9F/?/g' "$outpfile"
+  
   echo >> "$outpfile"
 }
+
+
+#save_video_meta_data () {
+## Save YouTube channel, title, upload date and URL of the video.
+##
+#
+#  output_fields="$HEADER_VIDEO_TITLE: %(title)s
+#$HEADER_VIDEO_URL: %(webpage_url)s
+#$HEADER_YOUTUBE_CHANNEL: %(uploader)s
+#$HEADER_UPLOAD_DAY: %(upload_date>%Y-%m-%d)s"
+#  yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
+#  echo >> "$outpfile"
+#}
 
 
 download_subtitles () {
