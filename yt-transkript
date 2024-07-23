@@ -28,7 +28,7 @@
 # > Constants: < ------------------------------------------------------------
 
 readonly SCRIPT_NAME="yt-transkript"  # original script name
-readonly VERSION="2.0.3"
+readonly VERSION="2.0.4"
 readonly CURRENT_SCRIPT_NAME="${0##*/}"  # Saves the basename of the script file.
 
 # > Defaults: < ------------------------------------------------------------
@@ -96,8 +96,7 @@ OPTIONEN:
     -l      Ausgabesprache: beispielsweise \"en\" für Englisch.
     -t      Downloaddateiformat / Dateiendung der Downloaddatei
             (Default ist 'ttml'; einziger alternativer Wert: 'vtt'.)
-    --hilf  Die deutschsprachige Hilfeseite anzeigen.
-    --help  Zeigt abhängig von der Systemsprache die deutsche oder englische Hilfe an.
+    -h      Zeigt abhängig von der Systemsprache die deutsche oder englische Hilfe an.
     -#      Die Versionsnummer von $SCRIPT_NAME ausgeben.
 
 ALTERNATIVE SPRECHENDE AUFRUFPARAMETER:
