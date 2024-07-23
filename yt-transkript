@@ -16,7 +16,8 @@
 # Author:    Bernd Storck
 # Contact:   https://www.facebook.com/BStLinux/
 #
-# History:   2024-04-10, 2024-04-15, 2024-05-24, 2024-05-27, 2024-06-01, 2024-06-09, 2024-06-26, 2024-06-28
+# History:   2024-04-10, 2024-04-15, 2024-05-24, 2024-05-27, 2024-06-01, 
+#            2024-06-09, 2024-06-26, 2024-06-28, 2024-07-23
 #
 # Copyright: 2024, Bernd Storck
 # License:   GNU General Public License 3.0
@@ -27,7 +28,7 @@
 # > Constants: < ------------------------------------------------------------
 
 readonly SCRIPT_NAME="yt-transkript"  # original script name
-readonly VERSION="2.0.2"
+readonly VERSION="2.0.3"
 readonly CURRENT_SCRIPT_NAME="${0##*/}"  # Saves the basename of the script file.
 
 # > Defaults: < ------------------------------------------------------------
@@ -306,7 +307,8 @@ define_output_phrases () {
 
 
 save_video_meta_data () {
-  # Save YouTube channel, title, upload date and URL of the video.
+# Save YouTube channel, title, upload date and URL of the video.
+#
   output_fields="$HEADER_VIDEO_TITLE: %(title)s
 $HEADER_VIDEO_URL: %(webpage_url)s
 $HEADER_YOUTUBE_CHANNEL: %(uploader)s
@@ -315,24 +317,12 @@ $HEADER_UPLOAD_DAY: %(upload_date>%Y-%m-%d)s"
   # Extract metadata
   yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
   
-  # Correct the URL format using Unicode code points
+  # The characters ':', '/' and '?' are sometimes coded incorrectly.
+  # Correct the URL format using Unicode code points:
   sed -i 's/\xEF\xBC\x9A/:/g; s/\xE2\xA7\xB8/\//g; s/\xEF\xBC\x9F/?/g' "$outpfile"
   
   echo >> "$outpfile"
 }
-
-
-#save_video_meta_data () {
-## Save YouTube channel, title, upload date and URL of the video.
-##
-#
-#  output_fields="$HEADER_VIDEO_TITLE: %(title)s
-#$HEADER_VIDEO_URL: %(webpage_url)s
-#$HEADER_YOUTUBE_CHANNEL: %(uploader)s
-#$HEADER_UPLOAD_DAY: %(upload_date>%Y-%m-%d)s"
-#  yt-dlp --get-filename -o "$output_fields" "$url" > "$outpfile"
-#  echo >> "$outpfile"
-#}
 
 
 download_subtitles () {
